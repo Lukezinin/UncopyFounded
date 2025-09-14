@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Buscador de Jogos Uncopylocked</title>
+  <style>
+    body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+    input { padding: 10px; width: 300px; }
+    button { padding: 10px; }
+    .game { background: white; padding: 10px; margin: 10px 0; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Buscar Jogos Uncopylocked</h1>
+  <input id="keyword" placeholder="Digite uma palavra-chave...">
+  <button onclick="search()">Buscar</button>
+  <div id="results"></div>
+
+  <script>
+    async function search() {
+      const kw = document.getElementById('keyword').value.trim();
+      const results = document.getElementById('results');
+      results.innerHTML = '🔎 Buscando...';
+
+      try {
+        // endpoint antigo, ainda funciona para buscas simples
+        const res = await fetch(`https://www.roblox.com/games/list-json?keyword=${encodeURIComponent(kw)}&startRows=0&maxRows=50`);
+        if (!res.ok) throw new Error('Falha na busca');
+
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          results.innerHTML = 'Nenhum jogo encontrado.';
+          return;
+        }
+
+        results.innerHTML = '';
+        for (const game of data) {
+          const url = game.GameDetailReferralUrl;
+
+          // ⚠️ Tenta verificar se é uncopylocked pelo HTML da página
+          // ATENÇÃO: Isso dá erro CORS se feito direto do navegador
+          let isUncopy = '❓ (não verificado)';
+          try {
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            const page = await fetch(proxyUrl);
+            const html = await page.text();
+            if (html.includes('game-context-menu')) {
+              isUncopy = '✅ Uncopylocked';
+            } else {
+              isUncopy = '❌ Não Uncopylocked';
+            }
+          } catch (err) {
+            isUncopy = '⚠️ Erro ao verificar';
+          }
+
+          const div = document.createElement('div');
+          div.className = 'game';
+          div.innerHTML = `
+            <h3>${game.Name}</h3>
+            <a href="${url}" target="_blank">🔗 Abrir jogo</a>
+            <p>Status: ${isUncopy}</p>
+          `;
+          results.appendChild(div);
+        }
+      } catch (err) {
+        results.innerHTML = 'Erro: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
